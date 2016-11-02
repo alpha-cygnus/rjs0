@@ -46,14 +46,14 @@ class BassNodePair extends BassNode {
 		this.a = a;
 		this.b = b;
 	}
-	getInps(): [Port] {
+	getInps(): [PortId] {
 		return this.a.getInps();
 	}
-	getOuts(): [Port] {
+	getOuts(): [PortId] {
 		return this.b.getOuts();
 	}
 	getInp(id: PortId): ?PortIn {
-		return this.a.getInp;
+		return this.a.getInp(id);
 	}
 	getOut(id: PortId, forPort?: ?PortIn): ?PortOut {
 		return this.b.getOut(id, forPort);
@@ -63,14 +63,19 @@ class BassNodePair extends BassNode {
 class BassNodeLink extends BassNodePair {
 	constructor(a, b: BassNode) {
 		super(a, b);
-		makeLinks();
+		this.makeLinks();
 	}
 	makeLinks() {
-		for (let out of this.a.getOuts()) {
-			for (let inp of this.b.getIns()) {
-
+		for (let oid of this.a.getOuts()) {
+			for (let iid of this.b.getInps()) {
+				this.makeLink(oid, iid);
 			}
 		}
+	}
+	makeLink(oid, iid) {
+		let inp = this.b.getInp(iid);
+		let out = this.a.getOut(oid, inp);
+		this.parent.addLink(inp, out);
 	}
 }
 

@@ -1,15 +1,19 @@
 {
 	function isArray(o) {
-    	return (o && typeof o == 'object' && ('length' in o));
+    	return (o && (typeof o == 'object') && ('length' in o));
     }
 	function *jsonML2X(obj) {
+    	let chi = [];
     	if (isArray(obj)) {
         	let a = obj[1];
             if (typeof a == 'object') {
-            	if (isArray(a)) chi = obj.slice(2);
+            	if (!isArray(a)) chi = obj.slice(2);
                 else {
                 	a = null; chi = obj.slice(1);
                 }
+            } else {
+            	a = null;
+                chi = obj.slice(1);
             }
             let tag = `<${obj[0]}`;
             if (a) {
@@ -18,11 +22,15 @@
             if (chi.length) {
             	tag += '>';
                 yield tag;
-                yield * chi.map(c => jsonML2X(c));
+                for (let c of chi) {
+                	yield * [...jsonML2X(c)].map(s => '   ' + s);
+                }
                 yield `</${obj[0]}>`;
             } else {
-            	yield tag += '';
+            	yield tag + '/>';
             }
+        } else {
+        	yield obj;
         }
     }
     function locationString(loc) {
@@ -35,28 +43,28 @@
     	switch(arguments.length) {
         	case 1: attr = {}; children = []; break;
             case 2: 
-              if (isArray(attr.length)) {
+              if (isArray(attr)) {
                   children = attr;
                   attr = {};
               }
               break;
         }
-        //attr.location = locationString();
+        attr.at = locationString();
         let res = [name];
         if (Object.keys(attr).length) res.push(attr);
         return res.concat(children);
     }
 }
 
-S = ss:statements { return elem('Module', ss) }
+S = ss:statements { return [...jsonML2X(elem('Module', ss)), ss] }
 
 statements = h:statement t:(SSEP s:statement { return s})* SSEP? { return [h].concat(t) }
 
 statement = let / func / chain / import
 
-let = id:id EQ v:chain { return gen("this.set('${id}', ${v})", {id, v}) }
+let = ln:letName EQ v:chain { return elem('Let', {name: ln.name}, [v]) }
 
-func = Id args? EQ chain
+func = Id args? EQ chain { return elem('Fun') }
 
 import = OBRACE h:imp t:(COMMA x:imp { return x })* CBRACE EQ v:chain {
 	return [h].concat(t).reduce((a, x) => Object.assign(a, x), {});
@@ -68,7 +76,7 @@ imp
 
 chain = h:stack t:(op:chainOp s:stack { return {op, s} })* {
 	if (!t.length) return h;
-    return [h].concat(t).reduce((a, {op, s}) => elem(op, a, s)); 
+    return [h].concat(t).reduce((a, {op, s}) => elem(op, [a, s])); 
 	return t.length ? elem('Chain', [h].concat(t)) : h
 }
 
@@ -85,13 +93,32 @@ slice = is:inpSlice? sl:prim os:outSlice? {
 prim = p:(cons / ref / group) { return p }
 
 cons =
-	id:Id as:cargs? { return elem(id, as) }
+	id:Id as:cargs? ln:letName? {
+    	let {name, range} = ln || {};
+    	let res = elem('New', {name: id}, as);
+        if (range) {
+        	let attr = {from: range.a, to: range.b};
+            if (name) attr.name = name;
+	        return elem('LetArr', attr, [res]);
+        } else {
+	        if (!name) return res;
+	        return elem('Let', {name}, [res]);
+        }
+    }
 	/ MUL n:prim? { return elem('Gain', n ? [n] : []) }
 	/ n:num { return n }
 
-num = n:NUM { return elem('Num', [n]) }
+letName
+	= name:id range:range? { return {name, range} }
+    / range:range { return { range } }
 
-ref = id:id { return elem('Ref', [id]) }
+range = LODASH nr:numrange { return nr }
+
+numrange = a:NUM b:(DASH b:NUM { return b })? { return {a, b: b || a} }
+
+num = value:NUM { return elem('Num', {value}) }
+
+ref = name:id { return elem('Ref', {name}) }
 
 group = OPARENS ss:statements CPARENS { return ss.length > 1 ? elem('Seq', ss) : ss[0] }
 
@@ -160,4 +187,10 @@ Id = _ id:$(AZ W*) _ { return id }
 
 MUL = _ "*" _
 
+DIGS = $(DIG+)
+
 NUM = _ n:$(("+" / "-")? DIG+ ("." DIG+)?) _ { return parseFloat(n) }
+
+LODASH = '_'
+
+DASH = '-'

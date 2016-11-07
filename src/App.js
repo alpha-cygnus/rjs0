@@ -3,19 +3,33 @@ import logo from './logo.svg';
 import './App.css';
 import rbcParser from './parser/rbc.pegjs';
 
+import babel from 'babel-core';
+
 //import rbcLoader from './loader/rbc.js';
 
 import rbcTest from 'includes!./rbc/test.rbc';
+
+import rbcTest2 from 'babel!includes!./loader/rbc.js!./rbc/test.rbc';
 
 //const rbcParser = require('pegjs!./parser/rbc.pegjs');
 
 class App extends Component {
   render() {
+    console.log('rendring');
+
+    // console.log('rbcTest3.4', rbcTest2);
     try {
-      var parseResult = rbcParser.parse(rbcTest);
+      let pr = rbcParser.parse(rbcTest);
+      var {xml, json} = pr;
+      console.log(xml);
+      babel.transform(xml, {
+        "presets": ["react"]
+      });
     } catch(e) {
       if (e.location) {
         console.error(e.location, e.message);
+      } else {
+        console.error(e);
       }
     }
     
@@ -32,7 +46,13 @@ class App extends Component {
           {rbcTest}
         </pre>
         <pre style={ {textAlign: 'left'} }>
-          {JSON.stringify(parseResult, null, '  ')}
+          {xml}
+        </pre>
+        <pre style={ {textAlign: 'left'} }>
+          {JSON.stringify(json)}
+        </pre>
+        <pre style={ {textAlign: 'left'} }>
+          {rbcTest2}
         </pre>
       </div>
     );

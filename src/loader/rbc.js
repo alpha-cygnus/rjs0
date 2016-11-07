@@ -1,9 +1,10 @@
-var rbcParser = require('pegjs-loader!../parser/rbc.pegjs'); //
-//import loaderUtils from 'loader-utils';
-//import pegjs from 'pegjs';
+//var rbcParser = require('pegjs'); //
+var rbcParser = require('../parser/rbc');
 
 module.exports = function loader(source) {
-	return `module.exports = "!"`;
+	let parsed = rbcParser.parse(source);
+	//parsed.xml;
+	return `module.exports = ${parsed.xml}`;
   // if (this && this.cacheable) {
   //   this.cacheable();
   // }

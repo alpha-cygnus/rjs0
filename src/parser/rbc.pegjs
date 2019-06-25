@@ -143,8 +143,8 @@ num = value:NUM {
 }
 
 ref = name:id {
-	return elem('Num', {name});
-	//return elem('Num', {}, [name])
+	return elem('Ref', {name});
+	//return elem('Ref', {}, [name])
 }
 
 group = OPARENS ss:statements CPARENS { return ss.length > 1 ? elem('Seq', ss) : ss[0] }
